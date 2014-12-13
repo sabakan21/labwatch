@@ -7,6 +7,7 @@ ActiveRecord::Base.establish_connection('test')
 class User < ActiveRecord::Base
 end
 =end
+require "time"
 
 def ping(ip)
   r = Regexp.new('[1-9]\d* (packets )?received')
@@ -22,16 +23,21 @@ def arp(ip)
 end
  
 def get_mac_addresses
-  mac_adresses = Array.new
-  network_address = '192.168.63.'
- 
-  arp_table = `arp -n`
-  arp_table.each_line{|arp|
-    if arp.match(/0c:3e:9f:26:ee:8b/) {
-            ip = arp.match(/[0-9]+¥.[0-9]+¥.[0-9]+¥.[0-9]/)
-            puts ip
+  file = File.open('/var/lib/dhcp/dhcpd.leases').read
+  data = {:time => Time.now-(24*60*60),:ip=>nil}
+  
+  
+  a = file.scan(/(\d+\.\d+\.\d+\.\d+)\s\{(.+?)\}/m)
+  a.each{|lease|
+    if lease[1].match(/0c:3e:9f:26:ee:8b/) 
+            time = Time.parse(lease[1].scan(/starts\s\d\s(\d+\/\d+\/\d+\s\d+:\d+:\d+)/).flatten[0])
+            if data[:time] < time
+                    data[:time] = time
+                    data[:ip] = lease[0]
+            end
+    end
   }
-  mac_adresses
+  data
 end
  
 p get_mac_addresses
